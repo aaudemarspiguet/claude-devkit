@@ -36,7 +36,11 @@ Local mode (the default) puts all of that in `.git/info/exclude`, so nothing rea
 | `goldfish-test` | Phase 3: zero-context test of the spec in a fresh session |
 | `mean-review` | Adversarial review of a finished implementation |
 | `clear-writing` | Simplified Technical English for docs and procedures |
-| `unslop-text` | Remove AI-prose tells |
+
+**Companion skill, not bundled.** Keep `unslop-text` standalone in `~/.claude/skills/unslop-text`,
+so `/unslop-text` works in any project. The plugin uses it when it is there: `write-spec`
+and `clear-writing` end with an unslop pass, and the `workflow-init` pointer block asks for one
+on reader-facing prose. Without the skill, those steps are skipped, and `--detect` notes that.
 
 **Hooks** (`plugins/workflow/hooks/`). They do nothing in a repo without `.claude/workflow.json`.
 

@@ -81,6 +81,8 @@ def detect(root):
         "test_dir_candidates": [d + "/" for d in TEST_CANDIDATES if (root / d).is_dir()],
         "already_initialised": (root / ".claude" / "workflow.json").is_file(),
         "existing_post_commit_hook": hook_path(root).is_file(),
+        # Companion skill, not bundled. Only the standalone copy has a fixed path to check.
+        "unslop_text_installed": (Path.home() / ".claude" / "skills" / "unslop-text" / "SKILL.md").is_file(),
     }
 
 
@@ -150,6 +152,8 @@ def pointer_block(issues_dir):
 - Pushing needs the user's yes every time. After the yes: `touch .claude/.push-approved`, then push.
 - Design work follows Elephant-Goldfish: `/workflow:design-discussion` -> `/workflow:write-spec`
   -> `/workflow:goldfish-test` (fresh session) -> build -> `/workflow:mean-review`.
+- Prose for a reader (READMEs, PR/MR descriptions, specs, docs, write-ups) gets a final pass with
+  the `unslop-text` skill when it is installed. Not for commit messages, issue Logs, or chat.
 {MARK_END}
 """
 

@@ -121,3 +121,9 @@ vocabulary choices against it.
 > The config file is normally in your home directory. Edit it before you start the application.
 > Save your changes before you start the application. If you do not save your changes, the
 > application uses the default settings instead.
+
+## Final pass
+
+For prose a reader will see (a README, a PR description, a write-up), run the `unslop-text`
+skill as a last pass if it is available. Its rules agree with these: short, plain sentences and
+no filler. Keep the STE rules where the two differ on a procedure.

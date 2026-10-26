@@ -15,7 +15,9 @@ It never overwrites a file that exists, so re-running it is safe.
 
 1. **Detect.** Run the script with `--detect` from the repo. If it is not a git repo, stop and
    offer `git init`. If `already_initialised` is true, say so and ask whether the user wants a
-   re-run (it only fills in missing pieces) or something else.
+   re-run (it only fills in missing pieces) or something else. If `unslop_text_installed` is
+   false, note (don't block) that `unslop-text` was not found in `~/.claude/skills`, so the
+   writing pass the pointer block asks for is skipped until it is installed standalone.
 2. **Confirm the settings with the user in one message.** Show what you found and propose
    values. Ask only about what detection could not settle:
    - **Mode**: `local` (default — tracker, config and rules stay out of git via

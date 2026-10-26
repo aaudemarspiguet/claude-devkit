@@ -30,6 +30,12 @@ Could someone (or some fresh session) with *zero* memory of this conversation im
 correctly from the doc alone, using only the context hierarchy for architecture context? If the
 doc leans on something only this conversation knows, write it down or cut it.
 
+## Before handing it over
+
+If the `unslop-text` skill is available, run its scanner in audit mode on the spec and fix only
+the high-severity hits. Precision beats style here: never loosen an exact term, a name, or a
+number to make a sentence read better. If the skill isn't available, skip this step.
+
 ## Mechanics
 
 Draft the content in conversation first. In Plan Mode, pull the plan into an editor (e.g.
