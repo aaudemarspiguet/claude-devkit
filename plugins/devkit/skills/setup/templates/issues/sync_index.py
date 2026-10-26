@@ -10,16 +10,22 @@ Run:
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
 HERE = Path(__file__).resolve().parent
 INDEX = HERE / "INDEX.md"
+LOCK = HERE / "INDEX.md.lock"
+READ_PREFIX = "Read from "  # the session-start refresh reads this line's time to throttle itself
+FAILED_PREFIX = "Refresh failed at "
 FIELDS = ("Status", "Priority", "Order", "Owner", "Tags", "Depends on", "Branch", "PR", "MR")
 STATUS_ORDER = {"in-progress": 0, "blocked": 1, "open": 2, "closed": 3}
 DEFAULT_ORDER_NOTE = "Work in the Order column. An issue is ready when all its dependencies are closed."
@@ -238,14 +244,18 @@ FORGES = {
 
 
 def load_prs(forge):
-    """Open PRs/MRs, oldest first. Returns (prs, None) or (None, reason)."""
+    """Open PRs/MRs, oldest first: (prs, None, True), or (None, reason, configured).
+
+    configured is False when there is no forge to read, so a missing table is expected
+    and not a failure.
+    """
     if forge not in FORGES:
-        return None, f"no forge sync (forge: {forge})"
+        return None, f"no forge sync (forge: {forge})", False
     try:
         prs = FORGES[forge][0]()
     except (OSError, RuntimeError, ValueError, KeyError, subprocess.TimeoutExpired) as e:
-        return None, str(e).splitlines()[0] if str(e) else type(e).__name__
-    return sorted(prs, key=lambda p: p["number"]), None
+        return None, str(e).splitlines()[0] if str(e) else type(e).__name__, True
+    return sorted(prs, key=lambda p: p["number"]), None, True
 
 
 def pr_table(prs, issues, forge):
@@ -271,10 +281,72 @@ def old_pr_section():
     return m.group(0).rstrip("\n").split("\n") if m else None
 
 
+def stale_pr_section(old, now, reason):
+    """The last good PR section with one "Refresh failed" note on top, or None."""
+    if not old or not any(line.startswith(READ_PREFIX) for line in old):
+        return None
+    body = old[1:]
+    while body and (not body[0] or body[0].startswith(FAILED_PREFIX)):
+        body.pop(0)
+    note = f"{FAILED_PREFIX}{now}: {reason}. Showing the data from the last good read."
+    return [old[0], "", note, "", *body]
+
+
+@contextmanager
+def index_lock(wait=5.0, stale=60.0):
+    """Hold INDEX.md.lock while reading the old INDEX.md and writing the new one.
+
+    The post-commit hook, the reindex hook and the session-start refresh can all run at
+    once. Without the lock, a --no-mrs rebuild could read the old PR section, a full
+    sync write a new one, and the --no-mrs write then put the old one back.
+    """
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            os.close(os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            break
+        except FileExistsError:
+            try:
+                if time.time() - LOCK.stat().st_mtime > stale:
+                    LOCK.unlink()  # left behind by a sync that was killed
+                    continue
+            except FileNotFoundError:
+                continue
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"{LOCK.name} is held by another sync. Try again, or delete it if no sync is running.")
+            time.sleep(0.1)
+    try:
+        yield
+    finally:
+        try:
+            LOCK.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def write_index(text):
+    """Atomic: a reader sees the old file or the new one, never half of each."""
+    tmp = INDEX.with_name("INDEX.md.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, INDEX)
+
+
 def main(with_mrs=None):
     """with_mrs=False keeps the old PR section (the post-commit hook uses this)."""
     if with_mrs is None:
         with_mrs = "--no-mrs" not in sys.argv[1:]
+    # The network read comes first, outside the lock, so a slow forge never blocks a rebuild.
+    forge = detect_forge() if with_mrs else None
+    prs, pr_error, configured = load_prs(forge) if with_mrs else (None, "skipped", False)
+    try:
+        with index_lock():
+            return render(with_mrs, forge, prs, pr_error, configured)
+    except TimeoutError as e:
+        print(f"INDEX.md not rebuilt: {e}", file=sys.stderr)
+        return 1
+
+
+def render(with_mrs, forge, prs, pr_error, configured):
     issues, bad = load()
     by_id = {i["ID"]: i for i in issues}
     unknown = [(i["ID"], d) for i in issues for d in i["deps"] if d not in by_id]
@@ -307,30 +379,32 @@ def main(with_mrs=None):
     out += ["", "## Closed issues", ""]
     out += [head, *[row(i) for i in closed]] if closed else ["None yet."]
 
-    forge = detect_forge() if with_mrs else None
-    prs, pr_error = load_prs(forge) if with_mrs else (None, "skipped")
+    now = f"{datetime.now():%Y-%m-%d %H:%M}"
     kept = None if with_mrs else old_pr_section()
+    if with_mrs and prs is None and configured:
+        kept = stale_pr_section(old_pr_section(), now, pr_error)
     out.append("")
     if kept:
         out += kept
     else:
-        now = f"{datetime.now():%Y-%m-%d %H:%M}"
         out += ["## Open PRs", ""]
         if prs is None:
             out.append(f"Not available at {now}: {pr_error}")
         else:
-            out += [f"Read from {forge} at {now}. Run `sync_index.py` by hand to refresh.", ""]
+            out += [f"{READ_PREFIX}{forge} at {now}. Run `sync_index.py` by hand to refresh.", ""]
             out += pr_table(prs, issues, forge) if prs else ["None."]
 
     if bad or unknown:
         out += ["", "## Problems", ""]
         out += [f"- Bad header, skipped: `{name}`" for name in bad]
         out += [f"- {iid} depends on unknown issue {dep}" for iid, dep in unknown]
-    INDEX.write_text("\n".join(out) + "\n", encoding="utf-8")
+    write_index("\n".join(out) + "\n")
 
     print(f"INDEX.md rebuilt: {len(active)} open, {len(closed)} closed.")
     print(f"Ready: {', '.join(ready) or 'none'}")
-    if kept:
+    if kept and with_mrs:
+        print(f"Open PRs: refresh failed ({pr_error}). Kept the last good PR section.", file=sys.stderr)
+    elif kept:
         print("Open PRs: kept the last PR section (not refreshed).")
     elif prs is None:
         print(f"Open PRs: not available ({pr_error})", file=sys.stderr)
@@ -343,4 +417,4 @@ def main(with_mrs=None):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)

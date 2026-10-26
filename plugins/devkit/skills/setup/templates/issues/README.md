@@ -52,6 +52,18 @@ The git `post-commit` hook runs `post_commit.py` after each commit. Git does not
 
 To test the hook without a commit: `python {{ISSUES_DIR}}/post_commit.py --dry-run`.
 
+## When INDEX.md rebuilds
+
+| Trigger | Issue tables | Open PRs section |
+|---|---|---|
+| Claude edits an `ISS-*.md` file (devkit plugin hook) | rebuilt | kept as it is |
+| A git commit (post-commit hook) | rebuilt | kept as it is |
+| A Claude session starts (devkit plugin hook, in the background) | rebuilt | refreshed, at most every `session_sync_minutes` (default 10; 0 turns it off) |
+| `python {{ISSUES_DIR}}/sync_index.py` | rebuilt | refreshed |
+| `python {{ISSUES_DIR}}/sync_index.py --no-mrs` | rebuilt | kept as it is |
+
+If a refresh fails (offline, CLI not logged in), the last good table stays, with a `Refresh failed at …` note on top. Edits you make outside Claude are picked up by the next commit, session, or manual run. `INDEX.md.lock` keeps two rebuilds from overwriting each other; if a crashed sync left it behind, it is removed after 60 seconds.
+
 ## Rules
 - One issue gives one branch and one PR, when the issue needs code.
 - The hook writes facts (commits). The session writes decisions (status, checks, notes).

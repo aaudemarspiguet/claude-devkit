@@ -16,10 +16,15 @@ public (tracked in git), use the "Elevate" procedure in `/devkit:setup`. Never j
 
 ## Habits
 
-- **Never edit `INDEX.md`.** Change the issue files, then run `sync_index.py`. Use `--no-mrs`
-  when offline or when the forge CLI isn't logged in.
-- **What's next** = run `sync_index.py`, then name the lowest-Order ready issue and why it is
-  ready (its dependencies are closed). Don't pick by gut.
+- **Never edit `INDEX.md`.** Change the issue files. A hook rebuilds the index after each
+  issue edit, and the open-PR section refreshes in the background at session start (at most
+  every `session_sync_minutes`). Run `sync_index.py` yourself when you need live PR state.
+  Use `--no-mrs` when offline or when the forge CLI isn't logged in.
+- **What's next** = run `sync_index.py` (a full sync: PR state matters for "ready"), then name
+  the lowest-Order ready issue and why it is ready (its dependencies are closed). Don't pick
+  by gut.
+- **A `Refresh failed` line** in the Open PRs section means that table is old. Say so, and how
+  old ("Read from … at" time), instead of reporting it as current.
 - **Adding issues from a plan or spec**: one issue per branch-and-PR-sized piece. Fill
   `Depends on` honestly — that's what makes "ready" mean something. Give each a "Done when"
   list someone else could check, and a "Session prompt" that a fresh session can run with no

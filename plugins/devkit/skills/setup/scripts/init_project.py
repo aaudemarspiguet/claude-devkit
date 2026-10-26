@@ -39,7 +39,7 @@ TEMPLATES = SKILL / "templates"
 MARK_START = "<!-- devkit-plugin:start -->"
 MARK_END = "<!-- devkit-plugin:end -->"
 HOOK_MARK = "devkit-plugin"
-ISSUES_GITIGNORE = "INDEX.md\n__pycache__/\n"  # for a tracked issues folder
+ISSUES_GITIGNORE = "INDEX.md\nINDEX.md.*\n__pycache__/\n"  # for a tracked issues folder (.lock, .tmp too)
 LOCAL_NOTE ="This folder is in `.git/info/exclude`. Git does not track it. Do not push it."
 TRACKED_NOTE = (
     "This folder is tracked in git. Commit issue changes with the work they describe. "
@@ -161,6 +161,7 @@ def build_config(args, root):
             "forge": args.forge,
             "order_note": "Work in the Order column. An issue is ready when all its dependencies are closed.",
             "skip_commit_prefixes": [slash(d) for d in args.skip_commit_prefix],
+            "session_sync_minutes": 10,
         },
     }
 

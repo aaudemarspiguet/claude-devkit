@@ -54,6 +54,29 @@ def repo_root(cwd=None):
     return root.replace("\\", "/") if root else None
 
 
+def repo_relative(file_path: str, root: str, cwd):
+    """Repo-relative posix path, or None if the file is outside the repo."""
+    if not file_path:
+        return None
+    norm = file_path.replace("\\", "/")
+    if not os.path.isabs(norm):
+        norm = os.path.join(cwd or root, norm).replace("\\", "/")
+    try:
+        rel = os.path.relpath(os.path.normcase(os.path.abspath(norm)), os.path.normcase(os.path.abspath(root)))
+    except ValueError:  # different drive on Windows
+        return None
+    rel = rel.replace("\\", "/")
+    if rel.startswith(".."):
+        return None
+    # relpath on normcased paths lowercases on Windows; rebuild the original case.
+    return norm[len(norm) - len(rel):] if norm.lower().endswith(rel.lower()) else rel
+
+
+def issues_dir(config):
+    """The repo-relative issues folder, without a trailing slash."""
+    return config["issues"].get("dir", "plans-local/issues").strip("/\\").replace("\\", "/")
+
+
 def load(cwd=None):
     """Return (root, config) for an opted-in repo, or (root, None)."""
     root = repo_root(cwd)

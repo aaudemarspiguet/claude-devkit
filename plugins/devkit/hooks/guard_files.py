@@ -26,24 +26,6 @@ def block(reason: str) -> None:
     sys.exit(2)
 
 
-def repo_relative(file_path: str, root: str, cwd):
-    """Repo-relative posix path, or None if the file is outside the repo."""
-    if not file_path:
-        return None
-    norm = file_path.replace("\\", "/")
-    if not os.path.isabs(norm):
-        norm = os.path.join(cwd or root, norm).replace("\\", "/")
-    try:
-        rel = os.path.relpath(os.path.normcase(os.path.abspath(norm)), os.path.normcase(os.path.abspath(root)))
-    except ValueError:  # different drive on Windows
-        return None
-    rel = rel.replace("\\", "/")
-    if rel.startswith(".."):
-        return None
-    # relpath on normcased paths lowercases on Windows; rebuild the original case.
-    return norm[len(norm) - len(rel):] if norm.lower().endswith(rel.lower()) else rel
-
-
 def main() -> None:
     raw = sys.stdin.read()
     try:
@@ -61,7 +43,7 @@ def main() -> None:
 
     tool_input = payload.get("tool_input") or {}
     file_path = tool_input.get("file_path") or tool_input.get("notebook_path") or tool_input.get("path") or ""
-    rel = repo_relative(file_path, root, cwd)
+    rel = devkit_config.repo_relative(file_path, root, cwd)
     if rel is None:
         return
 

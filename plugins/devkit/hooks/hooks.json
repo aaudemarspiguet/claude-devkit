@@ -1,6 +1,31 @@
 {
-  "description": "Opt-in git and file guards. Every hook exits at once in a repo that has no .claude/devkit.json (run /devkit:setup to opt in).",
+  "description": "Opt-in git and file guards, plus INDEX.md upkeep (rebuild after an issue edit, PR refresh at session start). Every hook exits at once in a repo that has no .claude/devkit.json (run /devkit:setup to opt in).",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session_sync.py\"",
+            "async": true,
+            "timeout": 90
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/reindex.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Write|Edit|NotebookEdit",

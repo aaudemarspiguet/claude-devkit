@@ -67,6 +67,11 @@ on reader-facing prose. Without the skill, those steps are skipped, and `--detec
   protected branches, pushes without a one-shot `.claude/.push-approved`, and shell writes to protected paths.
 - `session_warnings.py` (Stop): warns about being on a protected branch, unpushed commits or no upstream,
   source changed with no tests (with a list of changed Python functions), and the open issue for this branch.
+- `reindex.py` (PostToolUse on Write/Edit/Bash/PowerShell): rebuilds `INDEX.md` (no network)
+  after Claude changes an `ISS-*.md` file. Never blocks.
+- `session_sync.py` (SessionStart): starts a full sync, including open PRs, as a detached
+  background process, at most every `session_sync_minutes`. The session never waits for it.
+  A failed refresh keeps the last good PR table, with a "Refresh failed" note.
 
 ## `.claude/devkit.json`
 
@@ -85,7 +90,8 @@ on reader-facing prose. Without the skill, those steps are skipped, and `--detec
     "dir": "plans-local/issues",
     "forge": "auto",
     "order_note": "Work in the Order column. An issue is ready when all its dependencies are closed.",
-    "skip_commit_prefixes": []
+    "skip_commit_prefixes": [],
+    "session_sync_minutes": 10
   }
 }
 ```
@@ -107,5 +113,6 @@ on reader-facing prose. Without the skill, those steps are skipped, and `--detec
 ```
 python3 plugins/devkit/tests/test_guards.py   # guard cases in a throwaway repo
 python3 plugins/devkit/tests/test_setup.py    # setup and --elevate end to end
+python3 plugins/devkit/tests/test_reindex.py  # INDEX.md upkeep (calls GitHub read-only)
 claude plugin validate .
 ```
