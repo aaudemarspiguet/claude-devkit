@@ -5,7 +5,7 @@ and always exits with 0.
     python plans-local/issues/post_commit.py [--dry-run]
 
 Commits that change only paths under "issues": {"skip_commit_prefixes": [...]}
-in .claude/workflow.json are skipped (for example bot-made log commits).
+in .claude/devkit.json are skipped (for example bot-made log commits).
 """
 
 import subprocess

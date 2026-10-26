@@ -1,8 +1,8 @@
 """
-Shared config loader for the workflow plugin hooks.
+Shared config loader for the devkit plugin hooks.
 
-The hooks are opt-in per repo. A repo opts in by having `.claude/workflow.json`
-at its git root (/workflow:workflow-init writes it). In any other repo, load()
+The hooks are opt-in per repo. A repo opts in by having `.claude/devkit.json`
+at its git root (/devkit:setup writes it). In any other repo, load()
 returns None and every hook exits 0 at once.
 """
 
@@ -10,7 +10,7 @@ import json
 import os
 import subprocess
 
-CONFIG_REL = ".claude/workflow.json"
+CONFIG_REL = ".claude/devkit.json"
 SENTINEL_REL = ".claude/.push-approved"
 
 DEFAULTS = {
@@ -34,7 +34,7 @@ DEFAULTS = {
 # Always protected once a repo opts in, so the guards cannot be switched off
 # by the agent they guard.
 BUILTIN_PROTECTED = {
-    CONFIG_REL: "The workflow guard config. Only the user edits it.",
+    CONFIG_REL: "The devkit guard config. Only the user edits it.",
 }
 
 

@@ -2,7 +2,7 @@
 """
 Shell-command guard (PreToolUse, matcher "Bash|PowerShell").
 
-Opt-in: does nothing unless the repo has .claude/workflow.json. Then it blocks
+Opt-in: does nothing unless the repo has .claude/devkit.json. Then it blocks
 force-pushes, history rewrites and commits on protected branches, pushes the
 user has not approved, and shell writes to protected paths.
 
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import workflow_config  # noqa: E402
+import devkit_config  # noqa: E402
 
 WRITEISH = re.compile(
     r"(>>?|(?<!\w)tee(?!\w)|sed\s+-[a-zA-Z]*i|truncate|(?<!\w)rm(?!\w)|(?<!\w)mv(?!\w)|(?<!\w)cp(?!\w)"
@@ -46,7 +46,7 @@ def block(reason: str) -> None:
 
 
 def current_branch(cwd: str, protected) -> str:
-    branch = workflow_config.git("branch", "--show-current", cwd=cwd)
+    branch = devkit_config.git("branch", "--show-current", cwd=cwd)
     if not branch and protected:
         # Cannot tell which branch we are on -> assume the dangerous one.
         return protected[0]
@@ -110,9 +110,9 @@ def main() -> None:
 
     cwd = payload.get("cwd") or os.getcwd()
     try:
-        root, config = workflow_config.load(cwd)
+        root, config = devkit_config.load(cwd)
     except (OSError, ValueError) as exc:
-        block(f"Could not read {workflow_config.CONFIG_REL}: {exc}. Failing closed. Ask the user to fix it.")
+        block(f"Could not read {devkit_config.CONFIG_REL}: {exc}. Failing closed. Ask the user to fix it.")
     if config is None:
         return
 
@@ -126,7 +126,7 @@ def main() -> None:
     if config["block_force_push"] and git_sub(cmd, "push") and re.search(
         r"(--force\b|--force-with-lease\b|(?<!\w)-f(?!\w)|\s\+\S)", cmd
     ):
-        block("Force-pushing is blocked in this repo (.claude/workflow.json: block_force_push).")
+        block("Force-pushing is blocked in this repo (.claude/devkit.json: block_force_push).")
 
     if git_sub(cmd, r"(?:rebase|reset\s+--hard|filter-branch|filter-repo)"):
         branch = current_branch(cwd, protected_branches)
@@ -138,7 +138,7 @@ def main() -> None:
 
     # --- never push without the user's approval -----------------------------
     if config["require_push_approval"] and git_sub(cmd, "push"):
-        sentinel = Path(root) / workflow_config.SENTINEL_REL
+        sentinel = Path(root) / devkit_config.SENTINEL_REL
         if sentinel.exists():
             try:
                 sentinel.unlink()  # one-shot: consumed by this push
@@ -149,7 +149,7 @@ def main() -> None:
                 "Pushing requires the user's explicit approval, every time.\n\n"
                 "Ask the user, show them the branch and the diff, and only after they say "
                 "yes create the one-shot sentinel at the repo root:\n"
-                f"    touch {workflow_config.SENTINEL_REL}\n"
+                f"    touch {devkit_config.SENTINEL_REL}\n"
                 "then retry the push. Do not create that file on your own initiative."
             )
 

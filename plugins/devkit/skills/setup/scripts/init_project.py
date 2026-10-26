@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scaffold the workflow into a git repo: guard config, local issue tracker, rules,
+Scaffold the devkit into a git repo: guard config, local issue tracker, rules,
 post-commit hook, and a CLAUDE.md pointer. Safe to re-run: it never overwrites a
 file that already exists, and reports what it skipped.
 
@@ -35,9 +35,9 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 TEMPLATES = SKILL / "templates"
-MARK_START = "<!-- workflow-plugin:start -->"
-MARK_END = "<!-- workflow-plugin:end -->"
-HOOK_MARK = "workflow-plugin"
+MARK_START = "<!-- devkit-plugin:start -->"
+MARK_END = "<!-- devkit-plugin:end -->"
+HOOK_MARK = "devkit-plugin"
 
 CI_CANDIDATES = (".gitlab-ci.yml", ".travis.yml", "azure-pipelines.yml", "Jenkinsfile", ".circleci/config.yml")
 SOURCE_CANDIDATES = ("src", "app", "lib", "backend", "frontend", "packages", "server", "client", "pkg", "cmd")
@@ -79,7 +79,7 @@ def detect(root):
         "ci_files": ci,
         "source_dir_candidates": [d + "/" for d in SOURCE_CANDIDATES if (root / d).is_dir()],
         "test_dir_candidates": [d + "/" for d in TEST_CANDIDATES if (root / d).is_dir()],
-        "already_initialised": (root / ".claude" / "workflow.json").is_file(),
+        "already_initialised": (root / ".claude" / "devkit.json").is_file(),
         "existing_post_commit_hook": hook_path(root).is_file(),
         # Companion skill, not bundled. Only the standalone copy has a fixed path to check.
         "unslop_text_installed": (Path.home() / ".claude" / "skills" / "unslop-text" / "SKILL.md").is_file(),
@@ -125,7 +125,7 @@ def build_config(args, root):
     branches = args.branch or list(dict.fromkeys([base, "main", "master"]))
     return {
         "protected_branches": branches,
-        "protected_paths": dict(split_reason(p, "Protected by .claude/workflow.json. Ask the user first.") for p in args.protect),
+        "protected_paths": dict(split_reason(p, "Protected by .claude/devkit.json. Ask the user first.") for p in args.protect),
         "protected_dirs": {slash(k): v for k, v in (split_reason(p, "Protected folder. Ask the user first.") for p in args.protect_dir)},
         "append_only_files": [p.replace("\\", "/") for p in args.append_only],
         "block_force_push": True,
@@ -144,14 +144,14 @@ def build_config(args, root):
 
 def pointer_block(issues_dir):
     return f"""{MARK_START}
-## Workflow (claude-workflow plugin)
+## Devkit (claude-devkit plugin)
 
 - Issues live in `{issues_dir}/`. Read its `README.md` before you start, add, or close an issue.
   `INDEX.md` there is generated: never edit it by hand, run `python {issues_dir}/sync_index.py`.
-- `.claude/workflow.json` configures the plugin's guard hooks. Do not edit it; ask the user.
+- `.claude/devkit.json` configures the plugin's guard hooks. Do not edit it; ask the user.
 - Pushing needs the user's yes every time. After the yes: `touch .claude/.push-approved`, then push.
-- Design work follows Elephant-Goldfish: `/workflow:design-discussion` -> `/workflow:write-spec`
-  -> `/workflow:goldfish-test` (fresh session) -> build -> `/workflow:mean-review`.
+- Design work follows Elephant-Goldfish: `/devkit:design-discussion` -> `/devkit:write-spec`
+  -> `/devkit:goldfish-test` (fresh session) -> build -> `/devkit:mean-review`.
 - Prose for a reader (READMEs, PR/MR descriptions, specs, docs, write-ups) gets a final pass with
   the `unslop-text` skill when it is installed. Not for commit messages, issue Logs, or chat.
 {MARK_END}
@@ -187,7 +187,7 @@ def main():
 
     # 1. Guard config (the opt-in marker for the plugin hooks).
     config = build_config(args, root)
-    plan.write(root / ".claude" / "workflow.json", json.dumps(config, indent=2) + "\n", root)
+    plan.write(root / ".claude" / "devkit.json", json.dumps(config, indent=2) + "\n", root)
 
     # 2. Issue tracker.
     note = (
@@ -227,7 +227,7 @@ def main():
         if not args.dry_run:
             sep = "\n" if existing and not existing.endswith("\n\n") else ""
             target.write_text(existing + sep + pointer_block(args.issues_dir), encoding="utf-8", newline="\n")
-        plan.done.append(f"added the workflow pointer to {target.name}")
+        plan.done.append(f"added the devkit pointer to {target.name}")
 
     # 6. Keep local files out of git.
     exclude_file = root / (git(root, "rev-parse", "--git-path", "info/exclude") or ".git/info/exclude")
@@ -235,7 +235,7 @@ def main():
     if args.mode == "local":
         wanted += [
             args.issues_dir.split("/")[0] + "/",
-            ".claude/workflow.json",
+            ".claude/devkit.json",
             "CLAUDE.local.md",
             *(f".claude/rules/{p.name}" for p in sorted((TEMPLATES / "rules").glob("*.md"))),
         ]
@@ -245,7 +245,7 @@ def main():
         if not args.dry_run:
             exclude_file.parent.mkdir(parents=True, exist_ok=True)
             with exclude_file.open("a", encoding="utf-8", newline="\n") as fh:
-                fh.write(("\n" if current and current[-1] else "") + "# workflow plugin (local only)\n" + "\n".join(missing) + "\n")
+                fh.write(("\n" if current and current[-1] else "") + "# devkit plugin (local only)\n" + "\n".join(missing) + "\n")
         plan.done.append(f"added {len(missing)} line(s) to .git/info/exclude")
 
     # 7. First INDEX.md.

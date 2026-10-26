@@ -6,11 +6,11 @@ description: Work with the repo's local issue tracker (plans-local/issues/ISS-NN
 # Issues
 
 The tracker's own `README.md` (in the issues folder, default `plans-local/issues/`; the
-`issues.dir` value in `.claude/workflow.json` overrides it) is the source of truth for the
+`issues.dir` value in `.claude/devkit.json` overrides it) is the source of truth for the
 procedures. Read it first, every time, then follow it. This skill adds only the habits
 around it.
 
-If the repo has no issues folder, offer `/workflow:workflow-init` instead.
+If the repo has no issues folder, offer `/devkit:setup` instead.
 
 ## Habits
 

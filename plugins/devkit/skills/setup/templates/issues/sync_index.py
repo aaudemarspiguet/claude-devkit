@@ -3,7 +3,7 @@
 The issue files are the only source of issue status. The forge is the only
 source of PR/MR status: the "Open PRs" section is read live with `gh` (GitHub)
 or `glab` (GitLab). The forge is detected from the `origin` remote, or set with
-"issues": {"forge": "github" | "gitlab" | "none"} in .claude/workflow.json.
+"issues": {"forge": "github" | "gitlab" | "none"} in .claude/devkit.json.
 Run:
     python plans-local/issues/sync_index.py            # issues and open PRs/MRs
     python plans-local/issues/sync_index.py --no-mrs   # issues only (offline)
@@ -46,9 +46,9 @@ REPO = repo_root()
 
 
 def settings():
-    """The "issues" block of .claude/workflow.json, or {}."""
+    """The "issues" block of .claude/devkit.json, or {}."""
     try:
-        return json.loads((REPO / ".claude" / "workflow.json").read_text(encoding="utf-8")).get("issues", {})
+        return json.loads((REPO / ".claude" / "devkit.json").read_text(encoding="utf-8")).get("issues", {})
     except (OSError, ValueError):
         return {}
 

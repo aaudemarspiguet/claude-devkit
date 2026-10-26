@@ -1,16 +1,16 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-workflow",
+  "name": "claude-devkit",
   "description": "Amogh's personal Claude Code workflow: Elephant-Goldfish design skills, writing skills, opt-in git guard hooks, and a local issue tracker scaffold.",
   "owner": {
     "name": "Amogh Paruvelli"
   },
   "plugins": [
     {
-      "name": "workflow",
-      "description": "Design-process and writing skills, opt-in guard hooks, and /workflow:workflow-init to scaffold a local issue tracker in any repo.",
+      "name": "devkit",
+      "description": "Design-process and writing skills, opt-in guard hooks, and /devkit:setup to scaffold a local issue tracker in any repo.",
       "version": "0.1.0",
-      "source": "./plugins/workflow",
+      "source": "./plugins/devkit",
       "category": "productivity"
     }
   ]

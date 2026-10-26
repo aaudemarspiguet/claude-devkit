@@ -1,7 +1,7 @@
 """Run the guard hooks against a table of inputs and expected exit codes.
 
-Builds a throwaway git repo with a .claude/workflow.json, so it runs anywhere:
-    python3 plugins/workflow/tests/test_guards.py
+Builds a throwaway git repo with a .claude/devkit.json, so it runs anywhere:
+    python3 plugins/devkit/tests/test_guards.py
 """
 
 import json
@@ -38,7 +38,7 @@ def make_repo(tmp, branch, with_config=True):
     os.makedirs(os.path.join(repo, "tests"))
     git(repo, "init", "-q", "-b", branch)
     if with_config:
-        with open(os.path.join(repo, ".claude", "workflow.json"), "w", encoding="utf-8") as fh:
+        with open(os.path.join(repo, ".claude", "devkit.json"), "w", encoding="utf-8") as fh:
             json.dump(CONFIG, fh)
     with open(os.path.join(repo, "tests", "test_starter.py"), "w", encoding="utf-8") as fh:
         fh.write("a\nb\nc\n")
@@ -65,7 +65,7 @@ def bash_cases(on_main):
         ("echo x > web/tsconfig.json", 2, "shell write to nested protected file"),
         ("echo x > other/tsconfig.json", 0, "same name elsewhere is free"),
         ("rm ai_log/x.md", 2, "shell delete in protected dir"),
-        ("echo x >> .claude/workflow.json", 2, "config is self-protected"),
+        ("echo x >> .claude/devkit.json", 2, "config is self-protected"),
         ("cat .gitlab-ci.yml.bak > /dev/null", 0, "similar name, discard redirect"),
         ("git status --short", 0, "status"),
         ("ls ai_log", 0, "reading a protected dir is fine"),
@@ -94,7 +94,7 @@ def file_cases(repo):
         ({"file_path": j(".gitlab-ci.yml"), "content": "x"}, 2, "Write CI file"),
         ({"file_path": j("web", "tsconfig.json"), "content": "x"}, 2, "Write nested protected file"),
         ({"file_path": j("other", "tsconfig.json"), "content": "x"}, 0, "same name elsewhere"),
-        ({"file_path": j(".claude", "workflow.json"), "content": "{}"}, 2, "config is self-protected"),
+        ({"file_path": j(".claude", "devkit.json"), "content": "{}"}, 2, "config is self-protected"),
         ({"file_path": j("ai_log", "s.md"), "content": "x"}, 2, "Write into protected dir"),
         ({"file_path": j("tests", "test_starter.py"), "old_string": "a\nb\n", "new_string": "a\n"}, 2, "shrink append-only (Edit)"),
         ({"file_path": j("tests", "test_starter.py"), "old_string": "a\n", "new_string": "a\nz\n"}, 0, "grow append-only (Edit)"),
@@ -135,14 +135,14 @@ def main():
         for tool_input, want, label in file_cases(repo):
             check(GUARD_FILES, {"tool_name": "Write", "cwd": repo, "tool_input": tool_input}, want, label)
 
-        print("\n== repo without workflow.json: everything allowed")
+        print("\n== repo without devkit.json: everything allowed")
         plain = make_repo(tmp, "main", with_config=False)
         check(GUARD_BASH, {"tool_name": "Bash", "cwd": plain, "tool_input": {"command": f"{PUSH} --force"}}, 0, "force push allowed")
         check(GUARD_BASH, {"tool_name": "Bash", "cwd": plain, "tool_input": {"command": f'{COMMIT} -m x'}}, 0, "commit on main allowed")
         check(GUARD_FILES, {"tool_name": "Write", "cwd": plain, "tool_input": {"file_path": os.path.join(plain, ".gitlab-ci.yml"), "content": "x"}}, 0, "write allowed")
 
         print("\n== broken config fails closed")
-        with open(os.path.join(repo, ".claude", "workflow.json"), "w") as fh:
+        with open(os.path.join(repo, ".claude", "devkit.json"), "w") as fh:
             fh.write("{not json")
         check(GUARD_BASH, {"tool_name": "Bash", "cwd": repo, "tool_input": {"command": "ls"}}, 2, "bash blocked")
         check(GUARD_FILES, {"tool_name": "Write", "cwd": repo, "tool_input": {"file_path": os.path.join(repo, "a.md"), "content": "x"}}, 2, "write blocked")

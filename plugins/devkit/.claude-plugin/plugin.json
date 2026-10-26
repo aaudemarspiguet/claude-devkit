@@ -1,0 +1,9 @@
+{
+  "name": "devkit",
+  "version": "0.1.0",
+  "description": "Design-process and writing skills, opt-in guard hooks, and /devkit:setup to scaffold a local issue tracker in any repo.",
+  "author": {
+    "name": "Amogh Paruvelli"
+  },
+  "license": "UNLICENSED"
+}

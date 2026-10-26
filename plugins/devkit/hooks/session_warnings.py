@@ -2,7 +2,7 @@
 """
 End-of-session advisory checks (Stop hook).
 
-Opt-in: does nothing unless the repo has .claude/workflow.json. Purely
+Opt-in: does nothing unless the repo has .claude/devkit.json. Purely
 informational -- never blocks, never writes.
 
   1. Sitting on a protected branch.
@@ -24,8 +24,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import workflow_config  # noqa: E402
-from workflow_config import git  # noqa: E402
+import devkit_config  # noqa: E402
+from devkit_config import git  # noqa: E402
 
 
 def default_branch(cwd, protected):
@@ -117,7 +117,7 @@ def main() -> None:
         payload = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
         payload = {}
-    root, config = workflow_config.load(payload.get("cwd") or None)
+    root, config = devkit_config.load(payload.get("cwd") or None)
     if config is None:
         return
     cwd = root

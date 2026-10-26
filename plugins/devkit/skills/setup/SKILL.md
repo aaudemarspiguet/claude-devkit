@@ -1,9 +1,9 @@
 ---
-name: workflow-init
-description: Set up a repo for the personal workflow — guard config (.claude/workflow.json), a local issue tracker (plans-local/issues with INDEX.md, TEMPLATE.md, sync script, post-commit hook), the design rules, and a CLAUDE.md pointer. Use when the user says "init the workflow", "set up issues/tracker in this repo", "bootstrap this project", or starts a new project and wants their usual setup.
+name: setup
+description: Set up a repo for the personal workflow — guard config (.claude/devkit.json), a local issue tracker (plans-local/issues with INDEX.md, TEMPLATE.md, sync script, post-commit hook), the design rules, and a CLAUDE.md pointer. Use when the user says "init the workflow", "set up issues/tracker in this repo", "bootstrap this project", or starts a new project and wants their usual setup.
 ---
 
-# Workflow Init
+# Devkit Setup
 
 Scaffold this repo with the user's standard workflow. The script lives in this skill's base
 directory (shown above when the skill loads; `${CLAUDE_SKILL_DIR}` if it was substituted).
@@ -35,7 +35,7 @@ It never overwrites a file that exists, so re-running it is safe.
 4. **Report** what was written and skipped. If a post-commit hook already existed, show the
    line the user has to add to it by hand.
 5. **Explain the lock.** After this, the plugin's guards are live in this repo, and
-   `.claude/workflow.json` is protected from you. To change it, the user edits it, or you show
+   `.claude/devkit.json` is protected from you. To change it, the user edits it, or you show
    them the exact edit to make.
 6. **First issues.** Offer to write the first issues with the user. Follow the `issues` skill.
 
@@ -43,7 +43,7 @@ It never overwrites a file that exists, so re-running it is safe.
 
 | Path | Purpose |
 |---|---|
-| `.claude/workflow.json` | Turns the plugin's guard hooks on for this repo and configures them |
+| `.claude/devkit.json` | Turns the plugin's guard hooks on for this repo and configures them |
 | `<issues-dir>/README.md`, `TEMPLATE.md` | How the tracker works; the issue template |
 | `<issues-dir>/sync_index.py`, `post_commit.py` | Builds `INDEX.md`; logs commits to the matching issue |
 | `<issues-dir>/INDEX.md` | Generated index (empty at first) |

@@ -1,5 +1,5 @@
 #!/bin/sh
-# workflow-plugin: local issues log. Records each commit in the issue whose Branch: matches.
+# devkit-plugin: local issues log. Records each commit in the issue whose Branch: matches.
 # Logic: {{ISSUES_DIR}}/post_commit.py
 [ -f "{{ISSUES_DIR}}/post_commit.py" ] || exit 0
 python3 "{{ISSUES_DIR}}/post_commit.py" 2>/dev/null || python "{{ISSUES_DIR}}/post_commit.py"

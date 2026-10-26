@@ -4,7 +4,7 @@
 
 Each `ISS-NNN-<slug>.md` file is one action item. The issue file is the only source of its status. `INDEX.md` is made from the issue files. Do not edit `INDEX.md` by hand.
 
-The forge (GitHub or GitLab) is the only source of PR status. `sync_index.py` reads the open PRs with `gh` or `glab` and writes them to the "Open PRs" section of `INDEX.md`: approvals, checks on the head commit, merge state, and the issues that name the PR. On GitLab it also shows the "blocked by" MRs that are not merged. Do not write PR status in an issue file. The forge comes from the `origin` remote; set `"issues": {"forge": "github" | "gitlab" | "none"}` in `.claude/workflow.json` to override it. Run `python {{ISSUES_DIR}}/sync_index.py --no-mrs` to skip the forge (offline). An issue is linked to a PR by the `PR:` header (for example `#19, #20` or `#23 to #27`; GitLab uses `!19`), by its title, or by its `Branch:` header.
+The forge (GitHub or GitLab) is the only source of PR status. `sync_index.py` reads the open PRs with `gh` or `glab` and writes them to the "Open PRs" section of `INDEX.md`: approvals, checks on the head commit, merge state, and the issues that name the PR. On GitLab it also shows the "blocked by" MRs that are not merged. Do not write PR status in an issue file. The forge comes from the `origin` remote; set `"issues": {"forge": "github" | "gitlab" | "none"}` in `.claude/devkit.json` to override it. Run `python {{ISSUES_DIR}}/sync_index.py --no-mrs` to skip the forge (offline). An issue is linked to a PR by the `PR:` header (for example `#19, #20` or `#23 to #27`; GitLab uses `!19`), by its title, or by its `Branch:` header.
 
 ## Header values
 - Status: `open`, `in-progress`, `blocked`, `closed`.
@@ -43,7 +43,7 @@ The forge (GitHub or GitLab) is the only source of PR status. `sync_index.py` re
 
 ## The post-commit hook
 The git `post-commit` hook runs `post_commit.py` after each commit. Git does not track this hook.
-- It skips a commit that changes only paths listed in `"issues": {"skip_commit_prefixes": [...]}` in `.claude/workflow.json`.
+- It skips a commit that changes only paths listed in `"issues": {"skip_commit_prefixes": [...]}` in `.claude/devkit.json`.
 - It finds the issue whose `Branch:` header is the current branch. It adds one line to the Log of that issue: date, short SHA, subject, number of files.
 - It rebuilds the issue part of `INDEX.md`. It does not call the forge, so commits stay fast. It keeps the old "Open PRs" section with its old time. Run `sync_index.py` by hand to refresh it.
 - It never changes the status. It never commits. It always exits with 0.

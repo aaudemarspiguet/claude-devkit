@@ -2,7 +2,7 @@
 """
 File-edit guard (PreToolUse, matcher Write|Edit|NotebookEdit).
 
-Opt-in: does nothing unless the repo has .claude/workflow.json. Then it blocks
+Opt-in: does nothing unless the repo has .claude/devkit.json. Then it blocks
 writes to `protected_paths` and into `protected_dirs`, and blocks edits that
 would shrink an `append_only_files` entry.
 
@@ -18,7 +18,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import workflow_config  # noqa: E402
+import devkit_config  # noqa: E402
 
 
 def block(reason: str) -> None:
@@ -53,9 +53,9 @@ def main() -> None:
 
     cwd = payload.get("cwd")
     try:
-        root, config = workflow_config.load(cwd)
+        root, config = devkit_config.load(cwd)
     except (OSError, ValueError) as exc:
-        block(f"Could not read {workflow_config.CONFIG_REL}: {exc}. Failing closed. Ask the user to fix it.")
+        block(f"Could not read {devkit_config.CONFIG_REL}: {exc}. Failing closed. Ask the user to fix it.")
     if config is None:
         return
 

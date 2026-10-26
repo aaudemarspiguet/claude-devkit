@@ -1,5 +1,5 @@
 {
-  "description": "Opt-in git and file guards. Every hook exits at once in a repo that has no .claude/workflow.json (run /workflow:workflow-init to opt in).",
+  "description": "Opt-in git and file guards. Every hook exits at once in a repo that has no .claude/devkit.json (run /devkit:setup to opt in).",
   "hooks": {
     "PreToolUse": [
       {
