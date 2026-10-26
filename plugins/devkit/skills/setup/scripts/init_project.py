@@ -7,6 +7,7 @@ file that already exists, and reports what it skipped.
     init_project.py --detect                      # print what it found, write nothing
     init_project.py [options]                     # scaffold
     init_project.py --dry-run [options]           # print the plan, write nothing
+    init_project.py --elevate [--dry-run] [...]   # make a local tracker tracked (see elevate.py)
 
 Options (repeatable where it makes sense):
     --repo PATH                 repo to set up (default: the git root of the cwd)
@@ -38,6 +39,12 @@ TEMPLATES = SKILL / "templates"
 MARK_START = "<!-- devkit-plugin:start -->"
 MARK_END = "<!-- devkit-plugin:end -->"
 HOOK_MARK = "devkit-plugin"
+ISSUES_GITIGNORE = "INDEX.md\n__pycache__/\n"  # for a tracked issues folder
+LOCAL_NOTE ="This folder is in `.git/info/exclude`. Git does not track it. Do not push it."
+TRACKED_NOTE = (
+    "This folder is tracked in git. Commit issue changes with the work they describe. "
+    "`INDEX.md` is generated and git-ignored: run `sync_index.py` to build your own copy."
+)
 
 CI_CANDIDATES = (".gitlab-ci.yml", ".travis.yml", "azure-pipelines.yml", "Jenkinsfile", ".circleci/config.yml")
 SOURCE_CANDIDATES = ("src", "app", "lib", "backend", "frontend", "packages", "server", "client", "pkg", "cmd")
@@ -80,10 +87,26 @@ def detect(root):
         "source_dir_candidates": [d + "/" for d in SOURCE_CANDIDATES if (root / d).is_dir()],
         "test_dir_candidates": [d + "/" for d in TEST_CANDIDATES if (root / d).is_dir()],
         "already_initialised": (root / ".claude" / "devkit.json").is_file(),
+        "issues_tracked": issues_tracked(root),
         "existing_post_commit_hook": hook_path(root).is_file(),
         # Companion skill, not bundled. Only the standalone copy has a fixed path to check.
         "unslop_text_installed": (Path.home() / ".claude" / "skills" / "unslop-text" / "SKILL.md").is_file(),
     }
+
+
+def issues_dir_of(root):
+    """The issues folder named in .claude/devkit.json (default plans-local/issues)."""
+    try:
+        config = json.loads((root / ".claude" / "devkit.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        config = {}
+    return config.get("issues", {}).get("dir", "plans-local/issues").strip("/\\").replace("\\", "/")
+
+
+def issues_tracked(root):
+    """True or False for an existing issues folder, None if there is none."""
+    rel = issues_dir_of(root)
+    return None if not (root / rel).is_dir() else not is_ignored(root, rel + "/")
 
 
 def hook_path(root):
@@ -142,6 +165,24 @@ def build_config(args, root):
     }
 
 
+def issue_template(name, issues_dir, note):
+    text = (TEMPLATES / "issues" / name).read_text(encoding="utf-8")
+    return text.replace("{{ISSUES_DIR}}", issues_dir).replace("{{TRACKING_NOTE}}", note)
+
+
+def hook_template(issues_dir):
+    return (TEMPLATES / "git-hooks" / "post-commit").read_text(encoding="utf-8").replace("{{ISSUES_DIR}}", issues_dir)
+
+
+def exclude_path(root):
+    return root / (git(root, "rev-parse", "--git-path", "info/exclude") or ".git/info/exclude")
+
+
+def is_ignored(root, rel):
+    """True if git ignores this repo-relative path (a folder needs a trailing slash)."""
+    return subprocess.run(["git", "check-ignore", "-q", "--", rel], cwd=root).returncode == 0
+
+
 def pointer_block(issues_dir):
     return f"""{MARK_START}
 ## Devkit (claude-devkit plugin)
@@ -174,12 +215,24 @@ def main():
     ap.add_argument("--branch", action="append", default=[])
     ap.add_argument("--forge", choices=("auto", "github", "gitlab", "none"), default="auto")
     ap.add_argument("--skip-commit-prefix", action="append", default=[])
+    el = ap.add_argument_group("elevate (local -> tracked)")
+    el.add_argument("--elevate", action="store_true", help="make a local tracker tracked in git")
+    el.add_argument("--move-to", help="new issues folder (default: plans-local/... becomes plans/...)")
+    el.add_argument("--keep-dir", action="store_true", help="keep the issues folder where it is")
+    el.add_argument("--include", default="", help="also elevate: rules,pointer,config (comma-separated)")
+    el.add_argument("--elevate-branch", default="chore/devkit-track-issues")
+    el.add_argument("--allow-secrets", action="store_true", help="go ahead although the scan found token patterns")
+    el.add_argument("--refresh-scripts", action="store_true", help="replace an outdated sync_index.py/post_commit.py")
     args = ap.parse_args()
 
     root = find_root(args.repo)
     if args.detect:
         print(json.dumps(detect(root), indent=2))
         return
+    if args.elevate:
+        import elevate
+
+        sys.exit(elevate.run(root, args))
 
     args.issues_dir = args.issues_dir.strip("/\\").replace("\\", "/")
     plan = Plan(args.dry_run)
@@ -190,15 +243,12 @@ def main():
     plan.write(root / ".claude" / "devkit.json", json.dumps(config, indent=2) + "\n", root)
 
     # 2. Issue tracker.
-    note = (
-        "This folder is in `.git/info/exclude`. Git does not track it. Do not push it."
-        if args.mode == "local"
-        else "This folder is tracked in git. Commit issue changes with the work they describe."
-    )
+    note = LOCAL_NOTE if args.mode == "local" else TRACKED_NOTE
     for name in ("README.md", "TEMPLATE.md", "sync_index.py", "post_commit.py"):
-        text = (TEMPLATES / "issues" / name).read_text(encoding="utf-8")
-        text = text.replace("{{ISSUES_DIR}}", args.issues_dir).replace("{{TRACKING_NOTE}}", note)
-        plan.write(issues / name, text, root)
+        plan.write(issues / name, issue_template(name, args.issues_dir, note), root)
+    if args.mode == "tracked":
+        # INDEX.md is generated and changes on every rebuild; tracking it conflicts on every merge.
+        plan.write(issues / ".gitignore", ISSUES_GITIGNORE, root)
 
     # 3. Rules.
     globs = config["source_dirs"]
@@ -209,7 +259,7 @@ def main():
 
     # 4. Git post-commit hook.
     hook = hook_path(root)
-    text = (TEMPLATES / "git-hooks" / "post-commit").read_text(encoding="utf-8").replace("{{ISSUES_DIR}}", args.issues_dir)
+    text = hook_template(args.issues_dir)
     if hook.exists() and HOOK_MARK not in hook.read_text(encoding="utf-8", errors="replace"):
         plan.skipped.append(
             f"{hook.name} hook (another post-commit hook exists; add this line to it by hand: "
@@ -230,7 +280,7 @@ def main():
         plan.done.append(f"added the devkit pointer to {target.name}")
 
     # 6. Keep local files out of git.
-    exclude_file = root / (git(root, "rev-parse", "--git-path", "info/exclude") or ".git/info/exclude")
+    exclude_file = exclude_path(root)
     wanted = [".claude/.push-approved"]
     if args.mode == "local":
         wanted += [

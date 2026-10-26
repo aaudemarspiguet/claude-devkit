@@ -10,7 +10,9 @@ The tracker's own `README.md` (in the issues folder, default `plans-local/issues
 procedures. Read it first, every time, then follow it. This skill adds only the habits
 around it.
 
-If the repo has no issues folder, offer `/devkit:setup` instead.
+If the repo has no issues folder, offer `/devkit:setup` instead. To make a local tracker
+public (tracked in git), use the "Elevate" procedure in `/devkit:setup`. Never just edit
+`.git/info/exclude`.
 
 ## Habits
 

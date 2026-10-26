@@ -24,6 +24,23 @@ folders, confirms the settings with you, then writes:
 
 Local mode (the default) puts all of that in `.git/info/exclude`, so nothing reaches the shared repo.
 
+### Elevating local to tracked
+
+To make the issues public later, say "make the issues public" (or run `/devkit:setup` and ask
+to elevate). The skill runs `init_project.py --elevate --dry-run` and reads every issue itself.
+It shows you the files and any findings: tokens block the run; emails, home paths and remarks
+like "cannot see" are warnings. Only after your yes does it:
+
+- switch to a new branch `chore/devkit-track-issues` off the default branch
+- move `plans-local/issues` to `plans/issues` (`--keep-dir` or `--move-to DIR` to change that)
+  and rewrite every reference: `issues.dir`, the git hook, the README note, the pointer and the
+  paths in each issue
+- take the issues out of `.git/info/exclude` and stage them. Nothing is committed or pushed.
+
+`--include rules,pointer,config` also elevates those, so they affect teammates. `INDEX.md`
+stays untracked, because it's generated. In a tracked folder the post-commit hook writes no
+Log lines, since that would leave a modified file after every commit.
+
 ## What's in the plugin
 
 | Skill | Use |
@@ -89,5 +106,6 @@ on reader-facing prose. Without the skill, those steps are skipped, and `--detec
 
 ```
 python3 plugins/devkit/tests/test_guards.py   # guard cases in a throwaway repo
+python3 plugins/devkit/tests/test_setup.py    # setup and --elevate end to end
 claude plugin validate .
 ```

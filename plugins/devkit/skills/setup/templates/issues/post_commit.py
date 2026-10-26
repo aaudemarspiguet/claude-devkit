@@ -15,6 +15,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.dont_write_bytecode = True  # importing sync_index must not leave a __pycache__ in the issues folder
 
 
 def git(*args):
@@ -60,7 +61,12 @@ def main(dry_run):
             names = ", ".join(i["ID"] for i in matches)
             print(f"WARNING: more than one issue has Branch: {branch} ({names}). Using {matches[0]['ID']}.")
         target = HERE / matches[0]["File"]
-        if dry_run:
+        ignored = subprocess.run(["git", "check-ignore", "-q", "--", str(target)]).returncode == 0
+        if not ignored:
+            # A tracked issue file would be left modified after every commit. The branch's
+            # git log, with the Branch: header, is the record instead.
+            print(f"{target.name} is tracked in git. No Log line written.")
+        elif dry_run:
             print(f"dry run: would add to {target.name}:\n{line}")
         else:
             add_log_line(target, line)

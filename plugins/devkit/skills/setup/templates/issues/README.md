@@ -45,6 +45,7 @@ The forge (GitHub or GitLab) is the only source of PR status. `sync_index.py` re
 The git `post-commit` hook runs `post_commit.py` after each commit. Git does not track this hook.
 - It skips a commit that changes only paths listed in `"issues": {"skip_commit_prefixes": [...]}` in `.claude/devkit.json`.
 - It finds the issue whose `Branch:` header is the current branch. It adds one line to the Log of that issue: date, short SHA, subject, number of files.
+- In a folder tracked in git, it adds no Log line: that would leave a changed file after every commit. `git log` on the issue's branch is the record.
 - It rebuilds the issue part of `INDEX.md`. It does not call the forge, so commits stay fast. It keeps the old "Open PRs" section with its old time. Run `sync_index.py` by hand to refresh it.
 - It never changes the status. It never commits. It always exits with 0.
 - Merges in the forge web UI do not run the hook. Write them in the Log by hand.

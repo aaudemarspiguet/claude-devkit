@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up a repo for the personal workflow — guard config (.claude/devkit.json), a local issue tracker (plans-local/issues with INDEX.md, TEMPLATE.md, sync script, post-commit hook), the design rules, and a CLAUDE.md pointer. Use when the user says "init the workflow", "set up issues/tracker in this repo", "bootstrap this project", or starts a new project and wants their usual setup.
+description: Set up a repo for the personal workflow — guard config (.claude/devkit.json), a local issue tracker (plans-local/issues with INDEX.md, TEMPLATE.md, sync script, post-commit hook), the design rules, and a CLAUDE.md pointer. Use when the user says "init the workflow", "set up issues/tracker in this repo", "bootstrap this project", or starts a new project and wants their usual setup. Also use it to elevate a local tracker to tracked, when the user says "make the issues public", "track the issues in git", "share the tracker with the team", or "elevate the issues".
 ---
 
 # Devkit Setup
@@ -38,6 +38,37 @@ It never overwrites a file that exists, so re-running it is safe.
    `.claude/devkit.json` is protected from you. To change it, the user edits it, or you show
    them the exact edit to make.
 6. **First issues.** Offer to write the first issues with the user. Follow the `issues` skill.
+
+## Elevate a local tracker to tracked
+
+Use this when a repo set up in local mode should start tracking its issues in git. Once a push
+happens it can't be undone, so the user's review is the real safeguard. Never skip a step.
+
+1. **Dry run.** Run `init_project.py --elevate --dry-run`. Add `--include rules,pointer,config`
+   only if the user asked for more than the issues. It prints the files that will become
+   tracked, the new folder (`plans-local/issues` becomes `plans/issues` unless `--keep-dir` or
+   `--move-to DIR`), the branch, and the scan findings.
+2. **Read every issue file yourself.** The scan only matches patterns. Look for what it can't
+   see: remarks about named people, grades, scores, private plans, or anything written for
+   the user's eyes only. Quote each one with its `file:line`.
+3. **Show the user, in one message:**
+   - the file list
+   - the scan findings
+   - your own findings
+   - what each `--include` extra means for teammates: `rules` makes their Claude follow the
+     rules; `config` turns the devkit guards on for anyone who has the plugin
+   - that `INDEX.md` stays untracked, and that a tracked folder gets no automatic Log lines
+
+   Ask whether to fix anything first, then get an explicit yes.
+4. **Fix and re-run.** If the user wants edits, make them in the issue files, then run the dry
+   run again. A `SECRET` finding blocks the run. Remove it; use `--allow-secrets` only if the
+   user confirms the value is fake.
+5. **Run it** without `--dry-run`. It creates the branch `chore/devkit-track-issues`, moves the
+   folder and rewrites references, edits `.git/info/exclude`, stages the files, and stops. It
+   needs a clean tree with no staged changes. It changes `issues.dir` in `.claude/devkit.json`
+   itself, which is the one approved way that file changes.
+6. **Report.** Show `git status` and the commit it suggests. Committing and pushing follow the
+   normal flow, and pushing still needs the user's yes.
 
 ## What it creates
 
